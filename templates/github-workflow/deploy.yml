@@ -1,0 +1,66 @@
+name: Deploy {{SITE_NAME}}
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'site/**'
+      - 'host.yaml'
+      - '.github/workflows/deploy-{{SITE_SLUG}}.yml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout host CLI
+        uses: actions/checkout@v4
+        with:
+          repository: kenseehart/host
+          path: host
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout host dependencies
+        uses: actions/checkout@v4
+        with:
+          repository: kenseehart/shared
+          path: shared
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/checkout@v4
+        with:
+          repository: kenseehart/util
+          path: util
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install host
+        working-directory: host
+        run: |
+          uv sync
+          uv run python -m util.mkdo_setup
+          uv run mkdo host.sitehost -d .venv/bin
+
+      - name: Configure SSH deploy key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          HOST_SSH_HOST: ${{ secrets.HOST_SSH_HOST }}
+          HOST_SSH_USER: ${{ secrets.HOST_SSH_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf 'Host deploy-host\n  HostName %s\n  User %s\n  IdentityFile ~/.ssh/deploy_key\n  StrictHostKeyChecking accept-new\n' \
+            "$HOST_SSH_HOST" "$HOST_SSH_USER" >> ~/.ssh/config
+
+      - name: Deploy via rsync
+        env:
+          HOST_SSH_USER: ${{ secrets.HOST_SSH_USER }}
+          HOST_SSH_HOST: ${{ secrets.HOST_SSH_HOST }}
+        working-directory: host
+        run: |
+          uv run sitehost deploy --manifest "$GITHUB_WORKSPACE/host.yaml"

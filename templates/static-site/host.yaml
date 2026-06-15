@@ -1,0 +1,10 @@
+name: {{SITE_SLUG}}
+domain: {{DOMAIN}}
+static:
+  local: site
+  remote: {{REMOTE_PATH}}
+  transport: rsync
+  ssh_host: {{DOMAIN}}
+  excludes:
+    - ".git"
+    - ".DS_Store"
