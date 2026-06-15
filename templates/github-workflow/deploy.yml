@@ -8,6 +8,7 @@ on:
       - 'site/**'
       - 'host.yaml'
       - '.github/workflows/deploy-{{SITE_SLUG}}.yml'
+  workflow_dispatch:
 
 jobs:
   deploy:
