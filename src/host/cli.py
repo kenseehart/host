@@ -2,22 +2,16 @@
 
 from __future__ import annotations
 
-import json
 import sys
 from pathlib import Path
 
-from cmdline import cmd, create_parser, optarg, run_cli, cmds
+from cmdline import cmd, create_parser, emit_output, optarg, run_cli, cmds
 
 from host.config import load_env
 from host.deploy import deploy_site, read_deploy_state, validate_manifest
 from host.manifest import find_manifest, load_manifest
 from host.registry import register_site, registry_status, resolve_manifest
 from host.scaffold import scaffold_static_site, scaffold_template_tree
-
-
-def _flag(value: object) -> bool:
-    """Coerce cmdline optarg when subparser did not bind optional flags."""
-    return value is True if isinstance(value, bool) else False
 
 
 @cmd
@@ -106,22 +100,14 @@ def validate(
     return 0
 
 
-@cmd
-def sites(
-    json_output: bool = optarg(False, long_flag="--json", action="store_true", help="JSON output"),
-) -> int:
+@cmd(output=True)
+def sites(*, json_output: bool = False, md_output: bool = False) -> int:
     """List sites in the host registry."""
     rows = registry_status()
-    if _flag(json_output):
-        print(json.dumps(rows, indent=2))
-        return 0
-    if not rows:
+    if not rows and not json_output:
         print("No sites registered. Run: host mkweb <name> --domain example.com")
         return 0
-    for row in rows:
-        status = "OK" if row.get("manifest_exists") else "missing manifest"
-        print(f"{row['name']}: {row.get('domain', '?')} [{status}]")
-        print(f"  repo: {row['repo']}")
+    emit_output(rows, json_output=json_output, md=md_output, title="Registered sites")
     return 0
 
 
@@ -141,10 +127,12 @@ def register(
     return 0
 
 
-@cmd
+@cmd(output=True)
 def status(
     site: str | None = optarg(None, long_flag="--site", help="Registered site name"),
-    json_output: bool = optarg(False, long_flag="--json", action="store_true", help="JSON output"),
+    *,
+    json_output: bool = False,
+    md_output: bool = False,
 ) -> int:
     """Show deploy and git status for a site."""
     from host.config import git_status
@@ -166,18 +154,7 @@ def status(
         "deploy": deploy_state,
         "git": git,
     }
-    if _flag(json_output):
-        print(json.dumps(payload, indent=2))
-        return 0
-
-    print(f"Site: {m.name} ({m.domain})")
-    print(f"  static: {m.local_static_path}")
-    print(f"  remote: {m.static.remote} ({m.static.transport})")
-    if deploy_state:
-        print(f"  last deploy: {deploy_state.get('updated_at', 'unknown')}")
-        print(f"  last ok: {deploy_state.get('last_deploy_ok')}")
-    if git.get("is_git"):
-        print(f"  branch: {git.get('branch')} dirty={git.get('dirty')}")
+    emit_output(payload, json_output=json_output, md=md_output, title=f"Site: {m.name}")
     return 0
 
 
