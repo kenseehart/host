@@ -64,3 +64,5 @@ Registry: `~/.config/ken/host/sites.yaml`
 - `host.yaml` per consumer project
 - rsync primary; FTP fallback for legacy
 - Personal OAuth via `ken_mcp.PersonalAuthProvider`
+- **New domains:** Cloudflare Registrar (see **`docs/domains-and-dns.md`**)
+- **Next session prompt:** **`docs/NEXT-STEPS.md`**

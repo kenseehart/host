@@ -1,24 +1,24 @@
 # Domain inventory — edit ~/.config/ken/host/domains.yaml
 #
-# owner: ken | jeff | shared
+# owner: ken | jeff | other
+# registrar: cloudflare (standard for new Ken domains) | a2 | godaddy | azure | other
 # hosting: a2 | godaddy | azure | cloudflare | other
-# dns_host: optional override (otherwise inferred from live NS lookup)
-# registrar: where the domain is registered (may differ from dns_host)
 
 domains:
   - domain: seehart.com
     owner: ken
+    registrar: a2
     hosting: a2
     docroot: ~/seehart.com
-    registrar: a2
     site_name: seehart
-    notes: static site + Phase 2 MCP at /host
+    notes: migrate registrar to Cloudflare at renewal; static + Phase 2 MCP at /host
 
   - domain: agi.green
     owner: ken
+    registrar: a2
     hosting: a2
     docroot: ~/agi.green
-    registrar: a2
+    notes: migrate to Cloudflare at renewal
 
   - domain: yknotlabs.com
     owner: ken
@@ -29,9 +29,10 @@ domains:
 
   - domain: wondercamp.site
     owner: ken
+    registrar: a2
     hosting: a2
     docroot: ~/wondercamp.site
-    registrar: a2
+    notes: migrate to Cloudflare at renewal
 
   - domain: nfnc.com
     owner: ken

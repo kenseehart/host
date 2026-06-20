@@ -44,6 +44,10 @@ Do **not** point Claude.ai at Cursor’s local MCP processes.
 
 Phase 1 bootstrap: `sitehost setup-deploy --ssh-user CPANEL_USER` → deploy key + `host.env` + GitHub secrets.
 
+## Domain registration
+
+**Standard registrar:** [Cloudflare](domains-and-dns.md) — new Ken domains register there; existing domains transfer at renewal (~$10.44/yr .com at-cost). DNS on Cloudflare NS; A record → A2 hosting.
+
 ## RunPod: `daime-prism`
 
 Live pod for daime + fish PRISM work:
@@ -79,7 +83,10 @@ Prefer **SSH over exposed TCP** for rsync/SCP; proxy SSH (`user@ssh.runpod.io`) 
 
 ## Open items (manual)
 
-- [ ] Add deploy key to hosting.com SSH; set `HOST_SSH_USER`; GitHub secrets on `kenseehart/seehart`
-- [ ] `sitehost remote-prepare` + first static deploy (WP cutover)
+- [x] Phase 1 seehart.com static deploy (`~/seehart.com`, CI secrets)
 - [ ] Phase 2: cPanel Python app at `/host`; fill checklist in `hosting-python.md`
+- [ ] Cloudflare account + API token for registrar (see `domains-and-dns.md`)
+- [ ] Migrate Ken domains to Cloudflare at renewal (see `sitehost inventory --columns domain,renewal`)
 - [ ] `MONGODB_URI` in `~/.config/compute/secrets.yaml` for `compute run` job tracking
+
+Next session: [`NEXT-STEPS.md`](NEXT-STEPS.md)
