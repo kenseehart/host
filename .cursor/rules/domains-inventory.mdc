@@ -15,6 +15,7 @@ alwaysApply: false
 ## Domain ownership
 
 - Ken domains live in `~/.config/ken/host/domains.yaml` (`owner: ken`).
+- **Standard registrar for new Ken domains:** Cloudflare — migrate legacy at renewal (`host/docs/domains-and-dns.md`).
 - Jeff/shared account domains: `owner: jeff` — inventory only unless user explicitly coordinates deploy.
 - Never default `remote: ~/public_html` for addon domains — confirm docroot in cPanel first.
 
