@@ -46,6 +46,17 @@ jobs:
           uv run python -m util.mkdo_setup
           uv run mkdo host.sitehost -d .venv/bin
 
+      - name: Verify deploy secrets
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          HOST_SSH_HOST: ${{ secrets.HOST_SSH_HOST }}
+          HOST_SSH_USER: ${{ secrets.HOST_SSH_USER }}
+        run: |
+          if [ -z "$SSH_PRIVATE_KEY" ] || [ -z "$HOST_SSH_HOST" ] || [ -z "$HOST_SSH_USER" ]; then
+            echo "::error::Missing GitHub secrets. Run: sitehost setup-deploy --ssh-user CPANEL_USER --apply-gh"
+            exit 1
+          fi
+
       - name: Configure SSH deploy key
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}

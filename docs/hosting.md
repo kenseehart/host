@@ -1,129 +1,122 @@
-# Host platform deploy — seehart.com MCP + rsync static sites
+# Host platform — static sites + thin Python MCP on hosting.com
 
-Pattern matches [tesla/README.md](../tesla/README.md) and [fish/docs/deploy.md](../fish/docs/deploy.md).
+Two layers:
 
-## Prerequisites
+| Layer | Where | Tooling |
+|-------|-------|---------|
+| **Static sites** | hosting.com `~/public_html` | `sitehost deploy` (rsync CI) |
+| **Thin Python MCP** | hosting.com Python app | `sitehost serve` / [`templates/python-app/`](templates/python-app/) |
+| **Heavy compute** | GCP / RunPod | [`compute`](../compute/AGENTS.md) CLI |
 
-- SSH access to my.hosting.com (rsync to docroot)
-- `uv` on dev machine and hosting server (for MCP)
-- GitHub repo secrets for CI deploy
+See [hosting-python.md](hosting-python.md) for the Phase 2 MCP experiment on seehart.com.
 
-## Site manifest (`host.yaml`)
+**Architecture summary:** [platform-architecture.md](platform-architecture.md)
 
-Each consumer project has a `host.yaml`:
+## Phase 1 — static deploy bootstrap
+
+### One-time setup (laptop)
+
+```bash
+cd /home/ken/ws/host
+sitehost setup-deploy --ssh-user YOUR_CPANEL_USER
+# Optional: sitehost setup-deploy --ssh-user USER --apply-gh
+```
+
+This creates:
+
+- `~/.config/ken/host/deploy_key` (+ `.pub`)
+- `~/.config/ken/host/host.env` (`HOST_SSH_*`, `HOST_MCP_*`)
+
+Add the **public key** in hosting.com → SSH Access → Manage SSH Keys.
+
+### GitHub Actions secrets
+
+| Secret | Value |
+|--------|-------|
+| `SSH_PRIVATE_KEY` | Contents of `deploy_key` |
+| `HOST_SSH_USER` | cPanel username |
+| `HOST_SSH_HOST` | `seehart.com` (or SSH hostname) |
+
+Org-level secrets recommended so `seehart`, `y`, etc. share the same trio.
+
+### Site manifest (`host.yaml`)
 
 ```yaml
-name: mysite
-domain: example.com
+name: seehart
+domain: seehart.com
 static:
-  local: site          # path inside repo
+  local: site
   remote: ~/public_html
-  transport: rsync     # or ftp for legacy
-  ssh_host: example.com
-  ssh_user: cpanel-user
+  transport: rsync
+  ssh_host: seehart.com
+  ssh_user: your-cpanel-user   # or HOST_SSH_USER env
   excludes:
     - ".git"
 ```
 
-## CLI
+### WordPress cutover
 
 ```bash
-cd /home/ken/host
-uv sync
-uv run python -m util.mkdo_setup
-mkdo host.sitehost -d .venv/bin
+set -a && source ~/.config/ken/host/host.env && set +a
+sitehost remote-prepare --manifest /home/ken/ws/seehart/host.yaml
+sitehost deploy --manifest /home/ken/ws/seehart/host.yaml --dry-run
+sitehost deploy --manifest /home/ken/ws/seehart/host.yaml
+```
 
+Static sites ship `.htaccess` with `DirectoryIndex index.html` so Apache/LiteSpeed prefers HTML over leftover PHP.
+
+### CLI reference
+
+```bash
 sitehost mkweb "My Site" --domain example.com
-sitehost validate
-sitehost deploy --dry-run
+sitehost validate --site seehart
+sitehost deploy --site seehart --dry-run
+sitehost setup-deploy --ssh-user USER
+sitehost remote-prepare --manifest path/to/host.yaml
 sitehost sites
-host register mysite --repo /home/ken/example
+sitehost serve          # local MCP dev
 ```
 
 ## Registry
 
-`~/.config/ken/host/sites.yaml` maps logical names to repo paths for Host MCP:
+`~/.config/ken/host/sites.yaml` — sites managed by Host MCP tools.
 
-```yaml
-sites:
-  - name: gameofy
-    repo: /home/ken/y
-    manifest: host.yaml
-  - name: seehart
-    repo: /home/ken/seehart
-    manifest: host.yaml
-```
+## Host MCP (Phase 2+)
 
-## Host MCP (Claude.ai / mobile)
+**Target URL:** `https://seehart.com/host/mcp`
+
+**Claude.ai connectors:** deferred until [hosting-python.md](hosting-python.md) experiment confirms OAuth + stable URL.
 
 ### Env
 
-Copy [host.env.example](host.env.example) to `~/.config/ken/host/host.env`.
+Copy [host.env.example](host.env.example) or use `sitehost setup-deploy`.
 
-### Run locally
+### Local dev
 
 ```bash
-cd /home/ken/host
 sitehost serve
 ```
 
-### systemd (on hosting)
+### Production (hosting.com Python app)
 
-```ini
-[Unit]
-Description=Host MCP HTTP
-After=network.target
+Deploy [`templates/python-app/`](templates/python-app/) via cPanel **Setup Python App**. Entry: `passenger_wsgi.py` → `host.wsgi:application`.
 
-[Service]
-WorkingDirectory=/home/ken/host
-EnvironmentFile=/home/ken/.config/ken/host/host.env
-ExecStart=/home/ken/host/.venv/bin/sitesitehost serve
-Restart=on-failure
+## Workload routing
 
-[Install]
-WantedBy=multi-user.target
-```
+| Workload | Platform |
+|----------|----------|
+| Static HTML/CSS | hosting.com rsync |
+| MCP protocol, OAuth, deploy orchestration | hosting.com Python (thin) |
+| GPU ASR, PRISM training, batch jobs | `compute` (`daime-gpu`, `prism-train`) |
 
-### nginx
+MCP tools must **not** run GPU work on hosting.com — delegate via `compute run`.
 
-```nginx
-location /host/ {
-    proxy_pass http://127.0.0.1:8754/;
-    proxy_http_version 1.1;
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-}
-```
+## Fallback: `mcp-services` on GCP
 
-OAuth endpoints (`/authorize`, `/token`, etc.) proxy the same way as [tesla/README.md](../tesla/README.md).
-
-### Claude.ai connector
-
-1. Settings → Connectors → Add custom connector
-2. URL: `https://seehart.com/host/mcp`
-3. Advanced Settings: `HOST_MCP_CLIENT_ID` + `HOST_MCP_CLIENT_SECRET`
-
-## GitHub Actions CI
-
-`host mkweb` copies `.github/workflows/deploy-<slug>.yml`. Required secrets:
-
-| Secret | Purpose |
-|--------|---------|
-| `SSH_PRIVATE_KEY` | Deploy key for rsync |
-| `HOST_SSH_USER` | cPanel / SSH username |
-| `HOST_SSH_HOST` | SSH hostname (often same as domain) |
-
-For legacy FTP sites, set `transport: ftp` in host.yaml and use `FTP_PASSWORD` / `HOST_FTP_PASSWORD`.
+Only if the hosting.com Python experiment fails. Add `mcp-services` to [`compute/resources.yaml`](../compute/resources.yaml) and DNS `mcp.seehart.com`. See plan scope guard — not the default path.
 
 ## Verify SSH docroot
 
-Before first deploy, confirm remote path:
-
 ```bash
-ssh user@seehart.com 'ls -la ~/public_html'
+ssh -i ~/.config/ken/host/deploy_key USER@seehart.com 'ls -la ~/public_html'
 ```
-
-Adjust `static.remote` in host.yaml to match your hosting panel layout.

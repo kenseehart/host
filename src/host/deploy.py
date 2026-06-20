@@ -43,6 +43,13 @@ def _ssh_target(manifest: SiteManifest) -> str:
     return f"{user}@{host}"
 
 
+def _ssh_command() -> str:
+    identity = os.environ.get("HOST_SSH_IDENTITY_FILE", "").strip()
+    if identity:
+        return f"ssh -i {identity} -o IdentitiesOnly=yes"
+    return "ssh"
+
+
 def _rsync_args(manifest: SiteManifest, dry_run: bool) -> list[str]:
     local = manifest.local_static_path
     if not local.is_dir():
@@ -55,6 +62,8 @@ def _rsync_args(manifest: SiteManifest, dry_run: bool) -> list[str]:
         "rsync",
         "-az",
         "--delete",
+        "-e",
+        _ssh_command(),
         "--human-readable",
         "--progress" if os.isatty(1) else "--info=stats2",
     ]
@@ -132,6 +141,38 @@ def deploy_site(manifest: SiteManifest, dry_run: bool = False) -> int:
     if transport == "ftp":
         return deploy_ftp(manifest, dry_run=dry_run)
     raise ValueError(f"Unknown transport: {transport}")
+
+
+def _ssh_argv(remote_command: str, manifest: SiteManifest) -> list[str]:
+    target = _ssh_target(manifest)
+    identity = os.environ.get("HOST_SSH_IDENTITY_FILE", "").strip()
+    argv = ["ssh", "-o", "BatchMode=yes"]
+    if identity:
+        argv.extend(["-i", identity, "-o", "IdentitiesOnly=yes"])
+    argv.extend([target, remote_command])
+    return argv
+
+
+def remote_prepare_wordpress(manifest: SiteManifest, *, backup: bool = True) -> int:
+    """Backup public_html and remove WordPress index.php / wp-* before static deploy."""
+    remote = manifest.static.remote.rstrip("/")
+    parts: list[str] = []
+    if backup:
+        parts.append(
+            f"tar czf ~/wp-backup-$(date +%Y%m%d%H%M).tar.gz -C {remote} . "
+            "2>/dev/null || true"
+        )
+    parts.extend(
+        [
+            f"rm -f {remote}/index.php",
+            f"rm -rf {remote}/wp-admin {remote}/wp-content {remote}/wp-includes",
+            f"rm -f {remote}/wp-*.php {remote}/xmlrpc.php",
+            f"ls -la {remote}/index.* 2>/dev/null || true",
+        ]
+    )
+    script = " && ".join(parts)
+    result = subprocess.run(_ssh_argv(script, manifest), check=False, text=True)
+    return result.returncode
 
 
 def validate_manifest(manifest: SiteManifest) -> list[str]:

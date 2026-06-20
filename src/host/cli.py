@@ -159,6 +159,70 @@ def status(
 
 
 @cmd
+def setup_deploy(
+    repo: str = optarg(
+        "kenseehart/seehart",
+        long_flag="--repo",
+        help="GitHub repo for Actions secrets",
+    ),
+    ssh_user: str | None = optarg(
+        None, long_flag="--ssh-user", help="cPanel SSH username"
+    ),
+    ssh_host: str = optarg("seehart.com", long_flag="--ssh-host", help="SSH hostname"),
+    apply_gh: bool = optarg(
+        False,
+        long_flag="--apply-gh",
+        action="store_true",
+        help="Run gh secret set (needs admin:repo)",
+    ),
+) -> int:
+    """Generate deploy key + host.env; print hosting.com setup steps."""
+    from host.setup_deploy import apply_github_secrets, print_setup_instructions
+
+    print_setup_instructions(repo=repo, ssh_user=ssh_user, ssh_host=ssh_host)
+    if apply_gh:
+        if not ssh_user:
+            print("--apply-gh requires --ssh-user", file=sys.stderr)
+            return 1
+        return apply_github_secrets(repo=repo, ssh_user=ssh_user, ssh_host=ssh_host)
+    return 0
+
+
+@cmd
+def remote_prepare(
+    site: str | None = optarg(None, long_flag="--site", help="Registered site name"),
+    manifest: str | None = optarg(None, long_flag="--manifest", help="Path to host.yaml"),
+    no_backup: bool = optarg(
+        False,
+        long_flag="--no-backup",
+        action="store_true",
+        help="Skip tar backup of docroot",
+    ),
+) -> int:
+    """Backup docroot and remove WordPress files before first static deploy."""
+    from host.deploy import remote_prepare_wordpress
+
+    load_env()
+    try:
+        if manifest:
+            m = load_manifest(manifest)
+        else:
+            m = resolve_manifest(site_name=site)
+    except (FileNotFoundError, KeyError, ValueError) as exc:
+        print(exc, file=sys.stderr)
+        return 1
+
+    issues = validate_manifest(m)
+    if issues:
+        for issue in issues:
+            print(f"validate: {issue}", file=sys.stderr)
+        return 1
+
+    print(f"Preparing {m.domain} docroot at {m.static.remote}...")
+    return remote_prepare_wordpress(m, backup=not no_backup)
+
+
+@cmd
 def serve() -> int:
     """Run Host MCP HTTP server (Claude.ai connector)."""
     from host.mcp_server import main as mcp_main

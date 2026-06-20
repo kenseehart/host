@@ -1,0 +1,6 @@
+# Minimal deps for cPanel Python app virtualenv.
+# Install editable host + ken-mcp from your deployed checkout, or pin versions here.
+fastmcp>=2.0.0
+mcp>=1.0.0
+python-dotenv>=1.0.0
+pyyaml>=6.0.0

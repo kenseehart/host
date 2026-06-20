@@ -4,7 +4,7 @@ Cross-project static hosting, rsync deploy, and Claude.ai MCP for site managemen
 
 ## Shared resources
 
-Workspace index: **`/home/ken/AGENTS.md`**. OAuth helper: **`/home/ken/shared/mcp`** (`ken-mcp` package).
+Workspace index: **`/home/ken/ws/AGENTS.md`**. OAuth helper: **`/home/ken/ws/shared/mcp`** (`ken-mcp` package).
 
 ## What this project is
 
@@ -12,7 +12,7 @@ Workspace index: **`/home/ken/AGENTS.md`**. OAuth helper: **`/home/ken/shared/mc
 
 ## Repo
 
-- Path: **`/home/ken/host`**
+- Path: **`/home/ken/ws/host`**
 - GitHub: kenseehart/host (create on first push)
 
 ## Quick start
@@ -41,16 +41,18 @@ Locate the module: `whip host.sitehost` (not `whip host` — that hits `/usr/bin
 uv run python -m host.sitehost serve
 ```
 
-Deploy on seehart.com at `/host/mcp`. See **`docs/hosting.md`**.
+Deploy on seehart.com at `/host/mcp` (hosting.com Python app). See **`docs/platform-architecture.md`**, **`docs/hosting-python.md`**, and **`docs/hosting.md`**.
 
 Tools: `host_list_sites`, `host_status`, `host_deploy`, `host_scaffold`.
+
+Bootstrap: `sitehost setup-deploy --ssh-user CPANEL_USER`
 
 ## Consumers
 
 | Site | Repo | Manifest |
 |------|------|----------|
-| gameofy | `/home/ken/y` | `host.yaml` |
-| seehart | `/home/ken/seehart` | `host.yaml` |
+| gameofy | `/home/ken/ws/y` | `host.yaml` |
+| seehart | `/home/ken/ws/seehart` | `host.yaml` |
 
 Registry: `~/.config/ken/host/sites.yaml`
 

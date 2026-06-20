@@ -133,7 +133,7 @@ def find_manifest(start: Path | str | None = None) -> Path | None:
 
 
 def default_ssh_user() -> str:
-    return os.environ.get("HOST_SSH_USER", os.environ.get("USER", ""))
+    return os.environ.get("HOST_SSH_USER", "")
 
 
 def default_ssh_host(domain: str) -> str:
