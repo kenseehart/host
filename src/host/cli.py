@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from cmdline import cmd, create_parser, emit_output, optarg, run_cli, cmds
+from cmdline import cmd, create_parser, emit_output, optarg, parse_columns, run_cli, cmds
 
 from host.config import load_env
 from host.deploy import deploy_site, read_deploy_state, validate_manifest
@@ -220,6 +220,47 @@ def remote_prepare(
 
     print(f"Preparing {m.domain} docroot at {m.static.remote}...")
     return remote_prepare_wordpress(m, backup=not no_backup)
+
+
+@cmd(output=True)
+def inventory(
+    owner: str = optarg("ken", long_flag="--owner", help="Filter by owner (ken, jeff, other)"),
+    hosting: str | None = optarg(None, long_flag="--hosting", help="Filter by hosting provider"),
+    columns: str | None = optarg(
+        None,
+        long_flag="--columns",
+        help="Comma-separated columns (default: inventory preset)",
+    ),
+    no_probe: bool = optarg(
+        False,
+        long_flag="--no-probe",
+        action="store_true",
+        help="Skip live DNS/HTTP/WHOIS checks",
+    ),
+    *,
+    json_output: bool = False,
+    md_output: bool = False,
+) -> int:
+    """Domain inventory: DNS, uptime, renewal, hosting metadata."""
+    from host.inventory import default_columns, inventory_rows
+
+    rows = inventory_rows(owner=owner, hosting=hosting, probe=not no_probe)
+    if not rows:
+        print(
+            "No domains found. Copy host/templates/domains.yaml.example to "
+            "~/.config/ken/host/domains.yaml",
+            file=sys.stderr,
+        )
+        return 1
+    col_list = parse_columns(columns) or default_columns()
+    emit_output(
+        rows,
+        json_output=json_output,
+        md=md_output,
+        title=f"Domain inventory ({owner})",
+        columns=col_list,
+    )
+    return 0
 
 
 @cmd

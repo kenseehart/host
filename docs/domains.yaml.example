@@ -1,0 +1,48 @@
+# Ken-owned domains for host inventory (host_inventory MCP / sitehost inventory)
+# Copy from host/templates/domains.yaml.example and extend.
+
+domains:
+  - domain: seehart.com
+    owner: ken
+    hosting: a2
+    docroot: ~/seehart.com
+    registrar: a2
+    site_name: seehart
+
+  - domain: agi.green
+    owner: ken
+    hosting: a2
+    docroot: ~/agi.green
+    registrar: a2
+
+  - domain: yknotlabs.com
+    owner: ken
+    hosting: a2
+    docroot: ~/public_html/gameofy
+    site_name: gameofy
+
+  - domain: wondercamp.site
+    owner: ken
+    hosting: a2
+    docroot: ~/wondercamp.site
+    registrar: a2
+
+  - domain: nfnc.com
+    owner: ken
+    hosting: other
+    dns_host: dnsnameservice
+    notes: confirm registrar and renewal manually
+
+  - domain: carolegolden.com
+    owner: ken
+    hosting: a2
+    docroot: ~/carolegolden.com
+    notes: no public DNS at last check — confirm in cPanel
+
+  - domain: gameofy.com
+    owner: ken
+    hosting: other
+    dns_host: godaddy
+    registrar: godaddy
+    site_name: gameofy
+    notes: likely expired — confirm renewal at GoDaddy

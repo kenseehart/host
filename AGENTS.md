@@ -43,7 +43,9 @@ uv run python -m host.sitehost serve
 
 Deploy on seehart.com at `/host/mcp` (hosting.com Python app). See **`docs/platform-architecture.md`**, **`docs/hosting-python.md`**, and **`docs/hosting.md`**.
 
-Tools: `host_list_sites`, `host_status`, `host_deploy`, `host_scaffold`.
+Tools: `host_list_sites`, `host_inventory`, `host_status`, `host_deploy`, `host_scaffold`.
+
+Structured tools accept `format=text|md|json` and optional `columns=`. See **`docs/domains-and-dns.md`**.
 
 Bootstrap: `sitehost setup-deploy --ssh-user CPANEL_USER`
 

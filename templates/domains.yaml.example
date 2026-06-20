@@ -1,0 +1,76 @@
+# Domain inventory — edit ~/.config/ken/host/domains.yaml
+#
+# owner: ken | jeff | shared
+# hosting: a2 | godaddy | azure | cloudflare | other
+# dns_host: optional override (otherwise inferred from live NS lookup)
+# registrar: where the domain is registered (may differ from dns_host)
+
+domains:
+  - domain: seehart.com
+    owner: ken
+    hosting: a2
+    docroot: ~/seehart.com
+    registrar: a2
+    site_name: seehart
+    notes: static site + Phase 2 MCP at /host
+
+  - domain: agi.green
+    owner: ken
+    hosting: a2
+    docroot: ~/agi.green
+    registrar: a2
+
+  - domain: yknotlabs.com
+    owner: ken
+    hosting: a2
+    docroot: ~/public_html/gameofy
+    site_name: gameofy
+    notes: Game of Y static shell
+
+  - domain: wondercamp.site
+    owner: ken
+    hosting: a2
+    docroot: ~/wondercamp.site
+    registrar: a2
+
+  - domain: nfnc.com
+    owner: ken
+    hosting: other
+    dns_host: dnsnameservice
+    registrar: other
+    notes: DNS not on A2; confirm registrar
+
+  - domain: carolegolden.com
+    owner: ken
+    hosting: a2
+    docroot: ~/carolegolden.com
+    notes: no public DNS at last check — confirm in cPanel
+
+  - domain: gameofy.com
+    owner: ken
+    hosting: other
+    dns_host: godaddy
+    registrar: godaddy
+    site_name: gameofy
+    notes: likely expired — confirm renewal at GoDaddy
+
+  # Jeff / shared account — tracked for visibility, do not deploy without coordination
+  - domain: zillionsofgames.com
+    owner: jeff
+    hosting: a2
+    docroot: ~/public_html
+
+  - domain: geometrian.com
+    owner: jeff
+    hosting: a2
+    docroot: ~/geometrian.com
+
+  - domain: malletts.org
+    owner: jeff
+    hosting: a2
+
+  - domain: evolver.ai
+    owner: other
+    hosting: other
+    dns_host: azure
+    notes: work domain — not Ken personal infra

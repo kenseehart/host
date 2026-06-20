@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import json
-from typing import Any
-
-from fastmcp import FastMCP
+from cmdline import format_for_agent, parse_columns
 
 from host.config import (
     load_env,
@@ -13,22 +10,24 @@ from host.config import (
     oauth_state_dir,
 )
 from host.deploy import deploy_site, read_deploy_state
+from host.inventory import default_columns, inventory_rows
 from host.registry import registry_status, resolve_manifest
 from host.scaffold import scaffold_template_tree
 
 HOST_INSTRUCTIONS = """
 Host MCP — manage static sites on my.hosting.com.
 
-Use host_list_sites to see registered projects, host_status for deploy/git state,
-host_deploy to rsync (dry_run=true by default), and host_scaffold for template files.
+Use host_list_sites to see registered projects, host_inventory for DNS/uptime/renewal,
+host_status for deploy/git state, host_deploy to rsync (dry_run=true by default),
+and host_scaffold for template files.
+
+Structured tools accept format=text|md|json and optional columns=comma,separated,headers.
 """
 
 
-def _json(data: Any) -> str:
-    return json.dumps(data, indent=2, ensure_ascii=False)
-
-
 def build_mcp() -> FastMCP:
+    from fastmcp import FastMCP
+
     load_env()
     auth = None
     secret = mcp_client_secret()
@@ -46,12 +45,43 @@ def build_mcp() -> FastMCP:
     mcp = FastMCP("host", instructions=HOST_INSTRUCTIONS, auth=auth)
 
     @mcp.tool()
-    def host_list_sites() -> str:
-        """List all sites registered in ~/.config/ken/host/sites.yaml."""
-        return _json(registry_status())
+    def host_list_sites(
+        format: str = "text",
+        columns: str | None = None,
+    ) -> str:
+        """List sites registered in ~/.config/ken/host/sites.yaml."""
+        rows = registry_status()
+        return format_for_agent(
+            rows,
+            format=format,
+            title="Registered sites",
+            columns=parse_columns(columns),
+        )
 
     @mcp.tool()
-    def host_status(site: str) -> str:
+    def host_inventory(
+        owner: str = "ken",
+        hosting: str | None = None,
+        format: str = "text",
+        columns: str | None = None,
+        probe: bool = True,
+    ) -> str:
+        """Domain inventory: DNS, HTTP up/down, renewal, hosting metadata."""
+        rows = inventory_rows(owner=owner, hosting=hosting, probe=probe)
+        col_list = parse_columns(columns) or default_columns()
+        return format_for_agent(
+            rows,
+            format=format,
+            title=f"Domain inventory ({owner})",
+            columns=col_list,
+        )
+
+    @mcp.tool()
+    def host_status(
+        site: str,
+        format: str = "text",
+        columns: str | None = None,
+    ) -> str:
         """Deploy and git status for a registered site."""
         from host.config import git_status
 
@@ -65,26 +95,29 @@ def build_mcp() -> FastMCP:
             "deploy": read_deploy_state(m.name),
             "git": git_status(m.repo_root or m.local_static_path.parent),
         }
-        return _json(payload)
+        return format_for_agent(payload, format=format, title=f"Site: {site}", columns=parse_columns(columns))
 
     @mcp.tool()
-    def host_deploy(site: str, dry_run: bool = True) -> str:
+    def host_deploy(site: str, dry_run: bool = True, format: str = "json") -> str:
         """Deploy a site via rsync or ftp. Defaults to dry_run=true for safety."""
         m = resolve_manifest(site_name=site)
         code = deploy_site(m, dry_run=dry_run)
-        return _json(
-            {
-                "site": site,
-                "dry_run": dry_run,
-                "exit_code": code,
-                "deploy": read_deploy_state(m.name) if not dry_run else {},
-            }
-        )
+        payload = {
+            "site": site,
+            "dry_run": dry_run,
+            "exit_code": code,
+            "deploy": read_deploy_state(m.name) if not dry_run else {},
+        }
+        return format_for_agent(payload, format=format, title=f"Deploy: {site}")
 
     @mcp.tool()
-    def host_scaffold(template: str = "static-site") -> str:
+    def host_scaffold(template: str = "static-site", format: str = "json") -> str:
         """Return scaffold template file contents for agents to apply."""
-        return _json(scaffold_template_tree(template))
+        return format_for_agent(
+            scaffold_template_tree(template),
+            format=format,
+            title=f"Scaffold: {template}",
+        )
 
     return mcp
 
