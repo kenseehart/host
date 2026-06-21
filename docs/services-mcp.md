@@ -119,5 +119,17 @@ Use each service's OAuth client ID + secret. See [`claude-connectors.md`](claude
 compute status mcp-services
 compute ssh mcp-services
 sudo systemctl status mcp-host mcp-fish mcp-tesla mcp-bridge mcp-nfnc
+sudo systemctl status fish-sync.timer
 sudo tail -f /var/log/mcp-audit/audit.log
 ```
+
+## Fish cloud corpus
+
+Canonical **`fish.db`** on GCP persistent disk **`fish-data`** mounted at **`/data/fish`**. One-time setup:
+
+```bash
+sitehost setup-fish-cloud
+sitehost deploy-mcp-gateway
+```
+
+Details: [`../../fish/docs/cloud.md`](../../fish/docs/cloud.md).

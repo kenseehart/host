@@ -93,4 +93,4 @@ Prefer **SSH over exposed TCP** for rsync/SCP; proxy SSH (`user@ssh.runpod.io`) 
 - [ ] Migrate Ken domains to Cloudflare at renewal (see `sitehost inventory --columns domain,renewal`)
 - [ ] `MONGODB_URI` in `~/.config/compute/secrets.yaml` for `compute run` job tracking
 
-Next session: [`NEXT-STEPS.md`](NEXT-STEPS.md)
+Say **`next step`** in any Cursor chat → [`NEXT-STEPS.md`](NEXT-STEPS.md)

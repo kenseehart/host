@@ -76,9 +76,16 @@ def registry_status() -> list[dict[str, Any]]:
             "name": entry.name,
             "repo": str(repo),
             "manifest": str(manifest_path),
-            "manifest_exists": manifest_path.is_file(),
-            "repo_exists": repo.is_dir(),
+            "manifest_exists": False,
+            "repo_exists": False,
         }
+        try:
+            row["repo_exists"] = repo.is_dir()
+            row["manifest_exists"] = manifest_path.is_file()
+        except OSError as exc:
+            row["error"] = str(exc)
+            rows.append(row)
+            continue
         if manifest_path.is_file():
             try:
                 m = load_manifest(manifest_path, repo_root=repo)

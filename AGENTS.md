@@ -65,4 +65,4 @@ Registry: `~/.config/ken/host/sites.yaml`
 - rsync primary; FTP fallback for legacy
 - Personal OAuth via `ken_mcp.PersonalAuthProvider`
 - **New domains:** Cloudflare Registrar (see **`docs/domains-and-dns.md`**)
-- **Next session prompt:** **`docs/NEXT-STEPS.md`**
+- **Continue rollout:** say **`next step`** in any Cursor chat — agent reads **`docs/NEXT-STEPS.md`**

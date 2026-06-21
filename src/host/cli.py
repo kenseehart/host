@@ -325,6 +325,41 @@ def verify_mcp_gateway() -> int:
 
 
 @cmd
+def setup_fish_cloud(
+    dry_run: bool = optarg(
+        False, long_flag="--dry-run", action="store_true", help="Print plan only"
+    ),
+    no_migrate: bool = optarg(
+        False,
+        long_flag="--no-migrate",
+        action="store_true",
+        help="Skip uploading laptop fish.db",
+    ),
+    force_migrate: bool = optarg(
+        False,
+        long_flag="--force-migrate",
+        action="store_true",
+        help="Overwrite remote fish.db with laptop copy",
+    ),
+    skip_disk: bool = optarg(
+        False,
+        long_flag="--skip-disk",
+        action="store_true",
+        help="Skip PD create/attach/mount (disk already configured)",
+    ),
+) -> int:
+    """Provision Fish corpus on mcp-services: GCP PD, migrate db, sync timer."""
+    from host.setup_fish_cloud import setup_fish_cloud as run_setup
+
+    return run_setup(
+        dry_run=dry_run,
+        migrate=not no_migrate,
+        force_migrate=force_migrate,
+        skip_disk=skip_disk,
+    )
+
+
+@cmd
 def serve() -> int:
     """Run Host MCP HTTP server (Claude.ai connector)."""
     from host.mcp_server import main as mcp_main

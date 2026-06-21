@@ -1,5 +1,7 @@
 # MCP gateway rollout — step-by-step prompts
 
+**Superseded:** say **`next step`** in any Cursor chat; the agent reads [`NEXT-STEPS.md`](NEXT-STEPS.md). This file is optional deep reference only.
+
 Copy **one step at a time** into a new Cursor chat. Do not proceed to the next step until the **Done when** checklist passes.
 
 Reference: [`services-mcp.md`](services-mcp.md), [`claude-connectors.md`](claude-connectors.md)

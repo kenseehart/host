@@ -1,0 +1,20 @@
+[Unit]
+Description=Fish IMAP sync (cloud corpus)
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/data/fish/fish.db
+
+[Service]
+Type=oneshot
+User=mcp
+Group=mcp
+EnvironmentFile=-/home/mcp/.config/fish/fish.env
+Environment=MCP_GATEWAY=1
+WorkingDirectory=/home/mcp/mcp-gateway
+ExecStart=/home/mcp/mcp-gateway/.venv/bin/fish sync --no-progress
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target
