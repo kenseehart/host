@@ -52,6 +52,12 @@ def deploy(
     manifest: str | None = optarg(
         None, long_flag="--manifest", help="Path to host.yaml (default: search cwd)"
     ),
+    allow_public_html: bool = optarg(
+        False,
+        long_flag="--allow-public-html",
+        action="store_true",
+        help="Allow deploy to ~/public_html (primary docroot — confirm in cPanel first)",
+    ),
 ) -> int:
     """Deploy static site per host.yaml (rsync or ftp)."""
     load_env()
@@ -64,7 +70,7 @@ def deploy(
         print(exc, file=sys.stderr)
         return 1
 
-    issues = validate_manifest(m)
+    issues = validate_manifest(m, allow_public_html=allow_public_html)
     if issues:
         for issue in issues:
             print(f"validate: {issue}", file=sys.stderr)
@@ -73,13 +79,19 @@ def deploy(
     print(f"Deploying {m.name} ({m.domain}) via {m.static.transport}...")
     print(f"  local:  {m.local_static_path}")
     print(f"  remote: {m.static.remote}")
-    return deploy_site(m, dry_run=dry_run)
+    return deploy_site(m, dry_run=dry_run, allow_public_html=allow_public_html)
 
 
 @cmd
 def validate(
     site: str | None = optarg(None, long_flag="--site", help="Registered site name"),
     manifest: str | None = optarg(None, long_flag="--manifest", help="Path to host.yaml"),
+    allow_public_html: bool = optarg(
+        False,
+        long_flag="--allow-public-html",
+        action="store_true",
+        help="Allow validate when static.remote is ~/public_html",
+    ),
 ) -> int:
     """Validate host.yaml and local static paths."""
     try:
@@ -91,7 +103,7 @@ def validate(
         print(exc, file=sys.stderr)
         return 1
 
-    issues = validate_manifest(m)
+    issues = validate_manifest(m, allow_public_html=allow_public_html)
     if issues:
         for issue in issues:
             print(issue)
@@ -198,6 +210,12 @@ def remote_prepare(
         action="store_true",
         help="Skip tar backup of docroot",
     ),
+    allow_public_html: bool = optarg(
+        False,
+        long_flag="--allow-public-html",
+        action="store_true",
+        help="Allow prepare on ~/public_html (primary docroot — confirm in cPanel first)",
+    ),
 ) -> int:
     """Backup docroot and remove WordPress files before first static deploy."""
     from host.deploy import remote_prepare_wordpress
@@ -212,14 +230,14 @@ def remote_prepare(
         print(exc, file=sys.stderr)
         return 1
 
-    issues = validate_manifest(m)
+    issues = validate_manifest(m, allow_public_html=allow_public_html)
     if issues:
         for issue in issues:
             print(f"validate: {issue}", file=sys.stderr)
         return 1
 
     print(f"Preparing {m.domain} docroot at {m.static.remote}...")
-    return remote_prepare_wordpress(m, backup=not no_backup)
+    return remote_prepare_wordpress(m, backup=not no_backup, allow_public_html=allow_public_html)
 
 
 @cmd(output=True)
@@ -261,6 +279,29 @@ def inventory(
         columns=col_list,
     )
     return 0
+
+
+@cmd
+def deploy_mcp(
+    manifest: str | None = optarg(None, long_flag="--manifest", help="Path to host.yaml"),
+    domain: str | None = optarg(None, long_flag="--domain", help="Python app domain (default: manifest domain)"),
+    dry_run: bool = optarg(
+        False, long_flag="--dry-run", action="store_true", help="Print plan only"
+    ),
+) -> int:
+    """Deploy Host MCP Python app to hosting.com (Phase 2)."""
+    from host.deploy_mcp import deploy_mcp as run_deploy_mcp
+    from host.manifest import find_manifest, load_manifest
+
+    if manifest:
+        m = load_manifest(Path(manifest))
+    else:
+        found = find_manifest()
+        if found is None:
+            print("No host.yaml found. Pass --manifest.", file=sys.stderr)
+            return 1
+        m = load_manifest(found)
+    return run_deploy_mcp(m, dry_run=dry_run, domain=domain)
 
 
 @cmd

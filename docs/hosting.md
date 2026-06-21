@@ -63,6 +63,8 @@ sitehost deploy --manifest /home/ken/ws/seehart/host.yaml --dry-run
 sitehost deploy --manifest /home/ken/ws/seehart/host.yaml
 ```
 
+**Docroot guard:** `deploy` and `remote-prepare` refuse `~/public_html` (account primary docroot) unless you pass `--allow-public-html` after confirming the path in cPanel. Addon domains use their own path (e.g. `~/seehart.com`).
+
 Static sites ship `.htaccess` with `DirectoryIndex index.html` so Apache/LiteSpeed prefers HTML over leftover PHP.
 
 ### CLI reference

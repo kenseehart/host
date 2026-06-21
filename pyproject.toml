@@ -10,6 +10,7 @@ dependencies = [
     "mcp>=1.0.0",
     "python-dotenv>=1.0.0",
     "pyyaml>=6.0.0",
+    "a2wsgi>=1.10.0",
     "util",
 ]
 

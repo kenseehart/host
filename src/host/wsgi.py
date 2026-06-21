@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from a2wsgi import ASGIMiddleware
+
 from host.mcp_server import build_mcp
 
 _mcp = build_mcp()
-application = _mcp.http_app(transport="streamable-http")
+_asgi = _mcp.http_app(transport="streamable-http")
+application = ASGIMiddleware(_asgi)

@@ -29,16 +29,18 @@ Continue Ken workspace platform hosting rollout.
 ## Do next (priority order)
 
 ### 1. Verify seehart CI green
-- Check GitHub Actions on kenseehart/seehart after `host.yaml` push
-- Re-run workflow if needed
+- **Blocked:** `ModuleNotFoundError: cmdline.progress` — file exists locally but **not pushed** to `kenseehart/shared`
+- Fix: commit + push `shared/cmdline/src/cmdline/progress.py`, re-run workflow
 
 ### 2. Phase 2 — hosting.com Python MCP
-Follow `host/docs/hosting-python.md`:
-- cPanel → Setup Python App at `/host` on seehart.com
-- Deploy `host/templates/python-app/`
-- Set `HOST_MCP_*` from `~/.config/ken/host/host.env`
-- Verify `curl -I https://seehart.com/host/mcp` + OAuth discovery
-- Fill experiment checklist in `hosting-python.md`
+**Partial (2026-06-20):**
+- ✅ Passenger app `host-mcp` at `seehart.com/host` (cloudlinux-selector)
+- ✅ Venv deps installed (host, cmdline, ken-mcp, util, fastmcp, a2wsgi)
+- ✅ `sitehost deploy-mcp` CLI added
+- ❌ **`curl https://seehart.com/host/mcp` hangs** — WSGI/Passenger cannot run ASGI streamable-http
+- **Next:** `mcp-services` on GCP per [`hosting-python.md`](hosting-python.md) outcome matrix
+
+Follow `host/docs/hosting-python.md` for deploy command and checklist.
 
 ### 3. Phase 3 gate (after Phase 2 passes)
 - Register Claude.ai connector at `https://seehart.com/host/mcp`

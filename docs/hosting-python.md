@@ -1,6 +1,6 @@
 # Phase 2 — hosting.com Python MCP experiment
 
-**Status:** in progress — fill in findings below after deploying to seehart.com.
+**Status:** blocked — Passenger/WSGI cannot serve FastMCP `streamable-http` (requests hang). See outcome below.
 
 ## Hypothesis
 
@@ -15,19 +15,23 @@ hosting.com shared hosting can run a **thin Python app** (FastMCP `streamable-ht
 | `https://seehart.com/host/authorize` | OAuth authorize |
 | `https://seehart.com/host/token` | OAuth token |
 
-Exact paths depend on cPanel app URL mount — record actual URLs here.
+Mount confirmed: `PassengerBaseURI "/host"` in `~/seehart.com/host/.htaccess`.
 
 ## Deploy steps
 
 1. Complete [Phase 1 static deploy](hosting.md) (clean docroot, no WP `index.php`)
-2. cPanel → **Setup Python App**
-   - Python 3.10+
-   - App root: e.g. `~/apps/host-mcp`
-   - App URL: `/host` (or subdomain — record choice)
-3. Copy [`templates/python-app/`](../templates/python-app/) to app root
-4. In app virtualenv: install `requirements.txt` + editable `host`, `ken-mcp`, `cmdline`, `util`
-5. Set env vars from `~/.config/ken/host/host.env` in cPanel app config
-6. Restart app
+2. cPanel / `cloudlinux-selector create` — Python 3.11, app root `~/host-mcp`, URI `/host`
+3. **`sitehost deploy-mcp --manifest /path/to/host.yaml`** (rsyncs template + packages, pip install, restart)
+4. Secrets via `~/.config/ken/host/host.env` on server (synced by deploy-mcp)
+
+Manual equivalent:
+
+```bash
+set -a && source ~/.config/ken/host/host.env && set +a
+sitehost deploy-mcp --manifest /home/ken/ws/seehart/host.yaml
+```
+
+**cloudlinux-selector:** use `--domain seehart.com` only (not `--user` + `--domain` together).
 
 ```bash
 # Local smoke test before upload
@@ -38,31 +42,26 @@ curl -sI http://127.0.0.1:8754/mcp
 
 ## Experiment checklist
 
-Record results:
+Record results (2026-06-20):
 
 | Question | Finding |
 |----------|---------|
-| App type (Passenger, CGI, other) | _TBD_ |
-| Process model (long-lived vs per-request) | _TBD_ |
-| Custom URL paths for OAuth | _TBD_ |
-| Memory / CPU / time limits | _TBD_ |
-| HTTPS termination | _TBD_ |
-| Outbound SSH (for `host_deploy` rsync) | _TBD_ |
-| Outbound HTTPS to GCP/RunPod | _TBD_ |
-| `curl -sI https://seehart.com/host/mcp` | _TBD_ |
-| OAuth discovery JSON valid | _TBD_ |
-| `host_list_sites` tool works | _TBD_ |
+| App type (Passenger, CGI, other) | **Passenger** via CloudLinux selector; LiteSpeed `lswsgi` |
+| Process model (long-lived vs per-request) | Passenger prefork; app_status `started` |
+| Custom URL paths for OAuth | Mount at `/host`; OAuth paths under `/host/...` |
+| Memory / CPU / time limits | Not measured; import ~1.5s |
+| HTTPS termination | LiteSpeed at edge; `wsgi.url_scheme` https |
+| Outbound SSH (for `host_deploy` rsync) | Not tested yet |
+| Outbound HTTPS to GCP/RunPod | Not tested yet |
+| `curl -sI https://seehart.com/host/mcp` | **Hangs** (timeout) after import succeeds |
+| OAuth discovery JSON valid | **No** — same hang |
+| `host_list_sites` tool works | **No** — endpoint unreachable |
 
-## Thin-orchestrator validation
+### Root cause
 
-| Tool | Expected behavior |
-|------|-------------------|
-| `host_list_sites` | Read registry — no compute |
-| `host_status` | Read deploy state + git — no compute |
-| `host_deploy` | Rsync via SSH — website-level I/O |
-| `host_scaffold` | Return templates — no compute |
+FastMCP `streamable-http` is **ASGI** (Starlette). hosting.com exposes **WSGI only** (`lswsgi`). Wrapping with `a2wsgi.ASGIMiddleware` allows import but **requests never complete** (async/event-loop mismatch under Passenger).
 
-Future fish/daime MCP tools that need GPU must call `compute up` + `compute run`, not run locally on hosting.com.
+Tesla MCP on hosting uses **uvicorn + nginx proxy** on a VPS-style deploy, not shared-hosting Passenger.
 
 ## Outcome matrix
 
@@ -70,7 +69,7 @@ Future fish/daime MCP tools that need GPU must call `compute up` + `compute run`
 |--------|-----------|
 | FastMCP + OAuth works | Add Tesla/Fish MCP apps; proceed to Phase 3 (Claude connectors) |
 | Python works but OAuth paths broken | Adjust mount or proxy rules; document workaround |
-| Python apps not viable | `mcp-services` fallback on GCP (`compute/resources.yaml`) |
+| **Python apps not viable for streamable-http** | **`mcp-services` fallback on GCP** (`compute/resources.yaml`) — **current path** |
 
 ## Phase 3 gate
 
@@ -79,3 +78,5 @@ Do **not** register Claude.ai connectors until this doc has:
 1. Confirmed public HTTPS MCP URL
 2. Successful OAuth end-to-end test
 3. Valid `tools/list` response
+
+**All three blocked** until MCP HTTP responds.

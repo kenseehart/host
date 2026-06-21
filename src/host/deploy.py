@@ -10,6 +10,49 @@ from host.manifest import SiteManifest, default_ssh_host, default_ssh_user
 
 DEPLOY_STATE_DIR = Path.home() / ".config" / "ken" / "host" / "deploy-state"
 
+# Account primary docroot on shared cPanel — never rsync --delete here unless confirmed.
+FORBIDDEN_REMOTE_DOCROOTS = frozenset(
+    {
+        "~/public_html",
+        "public_html",
+        "/public_html",
+        "~/www",
+        "www",
+    }
+)
+
+
+def forbidden_remote_docroot(remote: str) -> str | None:
+    """Return the matched forbidden path, or None if remote is allowed."""
+    normalized = remote.strip().rstrip("/")
+    if normalized in FORBIDDEN_REMOTE_DOCROOTS:
+        return normalized
+    # Absolute home paths ending at public_html (e.g. /home/zillions/public_html)
+    if normalized.endswith("/public_html") and normalized.count("/") <= 3:
+        return normalized
+    return None
+
+
+def assert_safe_remote_docroot(
+    manifest: SiteManifest,
+    *,
+    allow_public_html: bool = False,
+) -> None:
+    """Fail fast before destructive rsync/prepare on shared primary docroots."""
+    remote = manifest.static.remote
+    blocked = forbidden_remote_docroot(remote)
+    if blocked is None:
+        return
+    if allow_public_html:
+        return
+    raise ValueError(
+        f"Refusing to modify {remote!r} for {manifest.domain}: "
+        f"{blocked} is the account primary docroot (often Zillions/shared sites), "
+        f"not a per-domain addon path like ~/seehart.com. "
+        f"Confirm docroot in cPanel, set static.remote in host.yaml, "
+        f"or pass --allow-public-html only if you intend this target."
+    )
+
 
 def _state_file(site_name: str) -> Path:
     DEPLOY_STATE_DIR.mkdir(parents=True, exist_ok=True)
@@ -75,7 +118,13 @@ def _rsync_args(manifest: SiteManifest, dry_run: bool) -> list[str]:
     return args
 
 
-def deploy_rsync(manifest: SiteManifest, dry_run: bool = False) -> subprocess.CompletedProcess:
+def deploy_rsync(
+    manifest: SiteManifest,
+    dry_run: bool = False,
+    *,
+    allow_public_html: bool = False,
+) -> subprocess.CompletedProcess:
+    assert_safe_remote_docroot(manifest, allow_public_html=allow_public_html)
     cmd = _rsync_args(manifest, dry_run=dry_run)
     result = subprocess.run(cmd, check=False, text=True)
     if result.returncode == 0 and not dry_run:
@@ -91,8 +140,14 @@ def deploy_rsync(manifest: SiteManifest, dry_run: bool = False) -> subprocess.Co
     return result
 
 
-def deploy_ftp(manifest: SiteManifest, dry_run: bool = False) -> int:
+def deploy_ftp(
+    manifest: SiteManifest,
+    dry_run: bool = False,
+    *,
+    allow_public_html: bool = False,
+) -> int:
     """FTP deploy via lftp mirror (fallback for legacy sites)."""
+    assert_safe_remote_docroot(manifest, allow_public_html=allow_public_html)
     server = manifest.static.ftp_server
     user = manifest.static.ftp_user or os.environ.get("HOST_FTP_USER")
     password = os.environ.get("HOST_FTP_PASSWORD") or os.environ.get("FTP_PASSWORD")
@@ -133,13 +188,18 @@ bye
     return result.returncode
 
 
-def deploy_site(manifest: SiteManifest, dry_run: bool = False) -> int:
+def deploy_site(
+    manifest: SiteManifest,
+    dry_run: bool = False,
+    *,
+    allow_public_html: bool = False,
+) -> int:
     transport = manifest.static.transport.lower()
     if transport == "rsync":
-        result = deploy_rsync(manifest, dry_run=dry_run)
+        result = deploy_rsync(manifest, dry_run=dry_run, allow_public_html=allow_public_html)
         return result.returncode
     if transport == "ftp":
-        return deploy_ftp(manifest, dry_run=dry_run)
+        return deploy_ftp(manifest, dry_run=dry_run, allow_public_html=allow_public_html)
     raise ValueError(f"Unknown transport: {transport}")
 
 
@@ -153,8 +213,14 @@ def _ssh_argv(remote_command: str, manifest: SiteManifest) -> list[str]:
     return argv
 
 
-def remote_prepare_wordpress(manifest: SiteManifest, *, backup: bool = True) -> int:
-    """Backup public_html and remove WordPress index.php / wp-* before static deploy."""
+def remote_prepare_wordpress(
+    manifest: SiteManifest,
+    *,
+    backup: bool = True,
+    allow_public_html: bool = False,
+) -> int:
+    """Backup docroot and remove WordPress index.php / wp-* before static deploy."""
+    assert_safe_remote_docroot(manifest, allow_public_html=allow_public_html)
     remote = manifest.static.remote.rstrip("/")
     parts: list[str] = []
     if backup:
@@ -175,7 +241,7 @@ def remote_prepare_wordpress(manifest: SiteManifest, *, backup: bool = True) -> 
     return result.returncode
 
 
-def validate_manifest(manifest: SiteManifest) -> list[str]:
+def validate_manifest(manifest: SiteManifest, *, allow_public_html: bool = False) -> list[str]:
     issues: list[str] = []
     local = manifest.local_static_path
     if not local.is_dir():
@@ -183,4 +249,10 @@ def validate_manifest(manifest: SiteManifest) -> list[str]:
     if manifest.static.transport == "rsync":
         if not (manifest.static.ssh_user or default_ssh_user()):
             issues.append("SSH user not set for rsync deploy")
+    blocked = forbidden_remote_docroot(manifest.static.remote)
+    if blocked and not allow_public_html:
+        issues.append(
+            f"static.remote {manifest.static.remote!r} is blocked (primary docroot). "
+            f"Use an addon path like ~/seehart.com or pass --allow-public-html after cPanel confirmation."
+        )
     return issues
