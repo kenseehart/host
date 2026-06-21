@@ -25,19 +25,27 @@ Structured tools accept format=text|md|json and optional columns=comma,separated
 """
 
 
-def build_mcp() -> FastMCP:
+def build_mcp(*, require_auth: bool = True):
     from fastmcp import FastMCP
+    from ken_mcp import audited_tool, gateway_mode, require_mcp_auth
 
     load_env()
     auth = None
-    secret = mcp_client_secret()
-    if secret:
+    if require_auth or gateway_mode():
+        auth = require_mcp_auth(
+            base_url=mcp_base_url(),
+            client_id=mcp_client_id(),
+            client_secret=mcp_client_secret(),
+            service="host",
+            state_dir=str(oauth_state_dir()),
+        )
+    elif mcp_client_secret():
         from ken_mcp import PersonalAuthProvider
 
         auth = PersonalAuthProvider(
             base_url=mcp_base_url(),
             client_id=mcp_client_id(),
-            client_secret=secret,
+            client_secret=mcp_client_secret(),
             client_name="host-mcp-client",
             state_dir=str(oauth_state_dir()),
         )
@@ -45,6 +53,7 @@ def build_mcp() -> FastMCP:
     mcp = FastMCP("host", instructions=HOST_INSTRUCTIONS, auth=auth)
 
     @mcp.tool()
+    @audited_tool("host")
     def host_list_sites(
         format: str = "text",
         columns: str | None = None,
@@ -59,6 +68,7 @@ def build_mcp() -> FastMCP:
         )
 
     @mcp.tool()
+    @audited_tool("host")
     def host_inventory(
         owner: str = "ken",
         hosting: str | None = None,
@@ -77,6 +87,7 @@ def build_mcp() -> FastMCP:
         )
 
     @mcp.tool()
+    @audited_tool("host")
     def host_status(
         site: str,
         format: str = "text",
@@ -98,6 +109,7 @@ def build_mcp() -> FastMCP:
         return format_for_agent(payload, format=format, title=f"Site: {site}", columns=parse_columns(columns))
 
     @mcp.tool()
+    @audited_tool("host")
     def host_deploy(site: str, dry_run: bool = True, format: str = "json") -> str:
         """Deploy a site via rsync or ftp. Defaults to dry_run=true for safety."""
         m = resolve_manifest(site_name=site)
@@ -111,6 +123,7 @@ def build_mcp() -> FastMCP:
         return format_for_agent(payload, format=format, title=f"Deploy: {site}")
 
     @mcp.tool()
+    @audited_tool("host")
     def host_scaffold(template: str = "static-site", format: str = "json") -> str:
         """Return scaffold template file contents for agents to apply."""
         return format_for_agent(
@@ -125,7 +138,7 @@ def build_mcp() -> FastMCP:
 def main() -> None:
     from host.config import mcp_host, mcp_port
 
-    mcp = build_mcp()
+    mcp = build_mcp(require_auth=True)
     mcp.run(transport="streamable-http", host=mcp_host(), port=mcp_port())
 
 

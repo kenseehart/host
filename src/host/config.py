@@ -28,7 +28,7 @@ def mcp_client_secret() -> str:
 
 
 def mcp_host() -> str:
-    return os.getenv("HOST_MCP_HOST", "0.0.0.0")
+    return os.getenv("HOST_MCP_HOST", "127.0.0.1")
 
 
 def mcp_port() -> int:

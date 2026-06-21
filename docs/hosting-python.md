@@ -73,10 +73,8 @@ Tesla MCP on hosting uses **uvicorn + nginx proxy** on a VPS-style deploy, not s
 
 ## Phase 3 gate
 
-Do **not** register Claude.ai connectors until this doc has:
+Proceed via GCP gateway — see [`services-mcp.md`](services-mcp.md):
 
-1. Confirmed public HTTPS MCP URL
-2. Successful OAuth end-to-end test
-3. Valid `tools/list` response
-
-**All three blocked** until MCP HTTP responds.
+1. Deploy `mcp-services` VM + TLS
+2. `sitehost verify-mcp-gateway` passes
+3. Register Claude.ai connectors at `https://mcp.seehart.com/...`

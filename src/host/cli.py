@@ -305,6 +305,26 @@ def deploy_mcp(
 
 
 @cmd
+def deploy_mcp_gateway(
+    dry_run: bool = optarg(
+        False, long_flag="--dry-run", action="store_true", help="Print plan only"
+    ),
+) -> int:
+    """Deploy full MCP gateway to GCP mcp-services VM."""
+    from host.deploy_mcp_gateway import deploy_mcp_gateway as run_deploy
+
+    return run_deploy(dry_run=dry_run)
+
+
+@cmd
+def verify_mcp_gateway() -> int:
+    """Run security verification checks against mcp.seehart.com gateway."""
+    from host.deploy_mcp_gateway import verify_mcp_gateway as run_verify
+
+    return run_verify()
+
+
+@cmd
 def serve() -> int:
     """Run Host MCP HTTP server (Claude.ai connector)."""
     from host.mcp_server import main as mcp_main

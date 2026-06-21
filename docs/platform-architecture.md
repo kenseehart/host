@@ -24,12 +24,14 @@ compute run daime-gpu 'cd ~/daime && uv run python -m hinario ...'
 
 Never run Whisper, PRISM training, or large embeddings on the hosting.com Python process.
 
+**MCP HTTP + OAuth** runs on GCP **`mcp-services`** ([`services-mcp.md`](services-mcp.md)) at `https://mcp.seehart.com`. hosting.com Passenger/WSGI cannot serve FastMCP (see [`hosting-python.md`](hosting-python.md)).
+
 ## MCP: Cursor vs Claude.ai
 
 | Client | Transport | Where |
 |--------|-----------|-------|
 | **Cursor** | stdio (local) | `.cursor/mcp.json` |
-| **Claude.ai / mobile** | HTTPS + OAuth | hosting.com Python app (target: `https://seehart.com/host/mcp`) |
+| **Claude.ai / mobile** | HTTPS + OAuth | GCP `mcp-services` — `/host`, `/tesla`, `/fish`, `/nfnc`, `/agent` |
 
 Do **not** point Claude.ai at Cursor’s local MCP processes.
 
@@ -38,8 +40,8 @@ Do **not** point Claude.ai at Cursor’s local MCP processes.
 | Phase | Goal | Doc |
 |-------|------|-----|
 | **1** | Static site on seehart.com (replace WP), CI rsync | [`hosting.md`](hosting.md), [`seehart/docs/SETUP.md`](../../seehart/docs/SETUP.md) |
-| **2** | hosting.com Python MCP experiment | [`hosting-python.md`](hosting-python.md) |
-| **3** | Claude.ai connectors | **Deferred** until Phase 2 confirms URL + OAuth |
+| **2** | hosting.com Python MCP experiment | ✅ Blocked — use GCP gateway |
+| **3** | Claude.ai connectors | [`services-mcp.md`](services-mcp.md) |
 | **4** | Other static sites (y, nfnc, …) | [`phase4-static-sites.md`](phase4-static-sites.md) |
 
 Phase 1 bootstrap: `sitehost setup-deploy --ssh-user CPANEL_USER` → deploy key + `host.env` + GitHub secrets.
@@ -76,15 +78,17 @@ Prefer **SSH over exposed TCP** for rsync/SCP; proxy SSH (`user@ssh.runpod.io`) 
 | Workload | Where |
 |----------|-------|
 | Consumer static HTML | hosting.com rsync |
-| MCP HTTP + OAuth | hosting.com Python (Phase 2) |
+| MCP HTTP + OAuth | GCP `mcp-services` (`mcp.seehart.com`) |
+| Cursor cloud agents (mobile) | `bridge` MCP on gateway |
 | GPU ASR, training | `compute` (`daime-gpu`, `daime-prism`) |
 | Fish PRISM | `fish/compute.yaml` → `daime-prism` |
-| MCP fallback | GCP `mcp-services` — only if Phase 2 fails |
 
 ## Open items (manual)
 
 - [x] Phase 1 seehart.com static deploy (`~/seehart.com`, CI secrets)
-- [ ] Phase 2: cPanel Python app at `/host`; fill checklist in `hosting-python.md`
+- [x] Phase 2 outcome: hosting.com blocked; gateway code ready
+- [ ] Bootstrap + deploy `mcp-services` VM
+- [ ] Register Claude.ai connectors
 - [ ] Cloudflare account + API token for registrar (see `domains-and-dns.md`)
 - [ ] Migrate Ken domains to Cloudflare at renewal (see `sitehost inventory --columns domain,renewal`)
 - [ ] `MONGODB_URI` in `~/.config/compute/secrets.yaml` for `compute run` job tracking

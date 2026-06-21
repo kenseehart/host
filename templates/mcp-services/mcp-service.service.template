@@ -1,0 +1,17 @@
+[Unit]
+Description=MCP gateway — {{SERVICE_NAME}}
+After=network.target
+
+[Service]
+Type=simple
+User=mcp
+Group=mcp
+WorkingDirectory={{APP_ROOT}}
+Environment=MCP_GATEWAY=1
+EnvironmentFile=-{{ENV_FILE}}
+ExecStart={{VENV_PYTHON}} -m {{MODULE}}
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
