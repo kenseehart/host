@@ -29,7 +29,7 @@ Continue Ken workspace platform hosting rollout.
 ## Do next (priority order)
 
 ### 1. Bootstrap mcp-services VM (if not done)
-- Follow [`host/docs/services-mcp.md`](services-mcp.md) — gcloud create, DNS, certbot
+- Follow [`host/docs/mcp-gateway-rollout-prompt.md`](mcp-gateway-rollout-prompt.md) — **one step at a time**
 - `compute up mcp-services`
 
 ### 2. Deploy gateway
