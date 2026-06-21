@@ -103,7 +103,7 @@ Register five custom MCP connectors in Claude settings:
 | Ken NFNC | `https://mcp.seehart.com/nfnc/mcp` |
 | Ken Agent | `https://mcp.seehart.com/agent/mcp` |
 
-Use each service's OAuth client ID + secret.
+Use each service's OAuth client ID + secret. See [`claude-connectors.md`](claude-connectors.md) for registration steps and phone E2E test.
 
 ## Security checklist
 
