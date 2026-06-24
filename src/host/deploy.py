@@ -88,9 +88,10 @@ def _ssh_target(manifest: SiteManifest) -> str:
 
 def _ssh_command() -> str:
     identity = os.environ.get("HOST_SSH_IDENTITY_FILE", "").strip()
+    opts = "-o StrictHostKeyChecking=accept-new"
     if identity:
-        return f"ssh -i {identity} -o IdentitiesOnly=yes"
-    return "ssh"
+        return f"ssh -i {identity} -o IdentitiesOnly=yes {opts}"
+    return f"ssh {opts}"
 
 
 def _rsync_args(manifest: SiteManifest, dry_run: bool) -> list[str]:

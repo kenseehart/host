@@ -66,13 +66,13 @@ jobs:
           mkdir -p ~/.ssh
           echo "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          printf 'Host deploy-host\n  HostName %s\n  User %s\n  IdentityFile ~/.ssh/deploy_key\n  StrictHostKeyChecking accept-new\n' \
-            "$HOST_SSH_HOST" "$HOST_SSH_USER" >> ~/.ssh/config
+          ssh-keyscan -H "$HOST_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
 
       - name: Deploy via rsync
         env:
           HOST_SSH_USER: ${{ secrets.HOST_SSH_USER }}
           HOST_SSH_HOST: ${{ secrets.HOST_SSH_HOST }}
+          HOST_SSH_IDENTITY_FILE: ~/.ssh/deploy_key
         working-directory: host
         run: |
           uv run sitehost deploy --manifest "$GITHUB_WORKSPACE/host.yaml"
